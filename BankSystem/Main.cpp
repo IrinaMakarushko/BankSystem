@@ -10,28 +10,18 @@ void addAccount();
 void deleteAccount();
 void select_all_deleted_client();
 void select_all_client();
+void searchClient();
 
-#define create_client "create client"
-#define delete_client "delete client"
-//#define watch_client "watch list of client"
-//#define watch_deleted_client "watch list of deleted client"
-#define add_account "add account"
-#define delete_account "delete account"
-#define add_account "add account"
-#define add_money "add money"
-#define withdraw_money "withdraw money"
+int addMoney();
+int withdrawMoney();
+
+//#define add_money "add money"
+//#define withdraw_money "withdraw money"
 #define view_accounts "view accounts"
 #define login_string "Log In"
 #define exit "Exit "
-/*#define admin_create_client 1
-#define admin_watch_client 2
-#define admin_delete_client 3
-#define admin_watch_deleted_client 4
-#define admin_add_account 5
-#define admin_delete_account 6
-#define admin_exit 7*/
 
-int admin_actions_count = 6;
+int admin_actions_count = 7;
 void(*admin_actions[])() =
 { 
 	createClient,
@@ -40,6 +30,7 @@ void(*admin_actions[])() =
 	deleteAccount,
 	select_all_client,
 	select_all_deleted_client,
+	searchClient,
 };
 char admin_actions_names[][128] =
 {
@@ -49,11 +40,24 @@ char admin_actions_names[][128] =
 	"delete account",
 	"watch list of client",
 	"watch list of deleted client",
+	"search client",
 };
 
-#define operator_add_money 1
+int operator_actions_count = 2;
+int(*operator_actions[])() =
+{
+	addMoney,
+	withdrawMoney,
+};
+char operator_actions_names[][128] =
+{
+	"add money",
+	"withdraw money"
+};
+
+/*#define operator_add_money 1
 #define operator_withdraw_money 2
-#define operator_exit 3
+#define operator_exit 3*/
 #define login_action 1
 #define exit_action 2
 sqlite3 *conn;
@@ -71,8 +75,7 @@ char* insertDeletedUser = "INSERT INTO deleted_user (FIRST_NAME, LAST_NAME) VALU
 char* selectAllDeleted = "SELECT * FROM deleted_user;";
 char* selectAccountInfById = "SELECT client_id, balance, current_transactions FROM account WHERE account_id = ?;";
 char* insertDeletedAccount = "INSERT INTO deleted_account (ACCOUNT_ID, CLIENT_ID, BALANCE, TOTAL_TRANSACTIONS) VALUES (?,?,?,?);";
-enum roleInSystem{UNKNOWN,ADMIN,OPERATOR};
-roleInSystem roleIdentified;
+enum roleInSystem{UNKNOWN,ADMIN,OPERATOR} roleIdentified;
 int currentBalance;
 int currentTransaction;
 int totalTransaction;
@@ -177,6 +180,62 @@ void select_all_deleted_client() {
 		}	
 	}
 }
+
+void searchClient()
+{
+	int rc;
+	char* first_name = new char[50];
+	char* last_name = new char[50];
+	char* buffer = new char[50];
+	printf("Please input first name of client\nadmin->");
+	std::cin >> buffer;
+	sprintf(first_name, "%%%s%%", buffer);
+	printf("Please input last name of client\nadmin->");
+	std::cin >> buffer;
+	sprintf(last_name, "%%%s%%", buffer);
+	char *search_and = "SELECT * FROM client WHERE first_name LIKE ? AND last_name LIKE ?;";
+	char *search_xor = "SELECT * FROM client WHERE (first_name LIKE ? OR last_name LIKE ?) AND NOT (first_name LIKE ? AND last_name LIKE ?);";
+
+	bool flag = false;
+
+	if (sqlite3_prepare(conn, search_and, strlen(search_and), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, last_name, -1, 0) == SQLITE_OK) {
+			while (sqlite3_step(stmt) != SQLITE_DONE)
+			{
+				printf("%d, %s, %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
+				flag = true;
+			}
+		}
+	}
+	else
+		printf("something went wrong!\n");
+
+	sqlite3_reset(stmt);
+
+	if (sqlite3_prepare(conn, search_xor, strlen(search_xor), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, last_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 3, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 4, last_name, -1, 0) == SQLITE_OK) {
+			while (sqlite3_step(stmt) != SQLITE_DONE)
+			{
+				printf("%d, %s, %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
+				flag = true;
+			}
+		}
+	}
+	else
+		printf("something went wrong!\n");
+
+	sqlite3_reset(stmt);
+
+	if (!flag){
+		printf("Nothing found.\n");
+	}
+}
+
+
 void addAccount()
 {
 	int rc;
@@ -337,7 +396,7 @@ void adminActions(){
 		scanf("%d", &numberOfOperation);
 		if (numberOfOperation == admin_actions_count){
 			printf("Good buy!\n");
-			//roleIdentified = UNKNOWN;
+			roleIdentified = UNKNOWN;
 			isExit = true;
 			break;
 		}
@@ -417,10 +476,35 @@ void operatorActions(){
 		sqlite3_close(conn);
 		return;
 	}
+
+
 	int numberOfOperation=0;
 	bool isExit=false;
 	printf("Operations:\n");
-	printf("%d %s\n",operator_add_money,add_money);
+
+	for (short i = 0; i < operator_actions_count; ++i){
+		printf("%d. %s\n", i, operator_actions_names[i]);
+	}
+	printf("%d. %s\n", operator_actions_count, exit);
+	scanf("%d", &numberOfOperation);
+	if (numberOfOperation == operator_actions_count){
+		printf("Good buy!\n");
+		roleIdentified = UNKNOWN;
+		isExit = true;
+	}
+
+	int result = 0;
+
+	if (numberOfOperation >= 0 && numberOfOperation < operator_actions_count)
+	{
+		result = operator_actions[numberOfOperation]();
+	}
+	else
+	{
+		printf("Unknown operation.Please, try again.\n");
+	}
+
+	/*printf("%d %s\n",operator_add_money,add_money);
 	printf("%d %s\n",operator_withdraw_money ,withdraw_money);
 	printf("%d %s\n",operator_exit, exit);
 	scanf("%d",&numberOfOperation);
@@ -440,7 +524,8 @@ void operatorActions(){
 	default:
 		printf("Unknown operation.Please, try again.\n");
 		break;
-	}
+	}*/
+
 	//------------
 	if(!isExit && result == 0){
 		char bufferUpdate[500];
