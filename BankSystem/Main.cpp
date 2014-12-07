@@ -3,10 +3,18 @@
 #include <stdio.h>
 #include <string>
 using namespace std;
+
+void createClient();
+void deleteClient();
+void addAccount();
+void deleteAccount();
+void select_all_deleted_client();
+void select_all_client();
+
 #define create_client "create client"
 #define delete_client "delete client"
-#define watch_client "watch list of client"
-#define watch_deleted_client "watch list of deleted client"
+//#define watch_client "watch list of client"
+//#define watch_deleted_client "watch list of deleted client"
 #define add_account "add account"
 #define delete_account "delete account"
 #define add_account "add account"
@@ -15,13 +23,34 @@ using namespace std;
 #define view_accounts "view accounts"
 #define login_string "Log In"
 #define exit "Exit "
-#define admin_create_client 1
+/*#define admin_create_client 1
 #define admin_watch_client 2
 #define admin_delete_client 3
 #define admin_watch_deleted_client 4
 #define admin_add_account 5
 #define admin_delete_account 6
-#define admin_exit 7
+#define admin_exit 7*/
+
+int admin_actions_count = 6;
+void(*admin_actions[])() =
+{ 
+	createClient,
+	deleteClient,
+	addAccount,
+	deleteAccount,
+	select_all_client,
+	select_all_deleted_client,
+};
+char admin_actions_names[][128] =
+{
+	"create client",
+	"delete client",
+	"add account",
+	"delete account",
+	"watch list of client",
+	"watch list of deleted client",
+};
+
 #define operator_add_money 1
 #define operator_withdraw_money 2
 #define operator_exit 3
@@ -297,46 +326,28 @@ int withdrawMoney(){
 void viewAccounts(){}
 void adminActions(){
 	connection();
-	bool isExit=false;
-	int numberOfOperation=0;
-	while(!isExit){
-		printf( "Operations:\n" );
-		printf("%d %s\n",admin_create_client, create_client );
-		printf("%d %s\n",admin_watch_client, watch_client);
-		printf("%d %s\n",admin_delete_client, delete_client);
-		printf("%d %s\n",admin_watch_deleted_client, watch_deleted_client);
-		printf("%d %s\n",admin_add_account, add_account );
-		printf("%d %s\n",admin_delete_account, delete_account);
-		printf("%d %s\n",admin_exit, exit);
-		printf("Please, enter a code of operation.\n");
-		scanf("%d",&numberOfOperation);
-		switch(numberOfOperation){
-		case admin_create_client:
-			createClient();
-			break;
-		case admin_delete_client:
-			deleteClient();
-			break;
-		case admin_add_account:
-			addAccount();
-			break;
-		case admin_delete_account:
-			deleteAccount();
-			break;
-		case admin_watch_deleted_client:
-			select_all_deleted_client();
-			break;
-		case admin_watch_client:
-			select_all_client();
-			break;
-		case admin_exit:
+	bool isExit = false;
+	int numberOfOperation = 0;
+	while (!isExit){
+		printf("Operations:\n");
+		for (short i = 0; i < admin_actions_count; ++i){
+			printf("%d. %s\n", i, admin_actions_names[i]);
+		}
+		printf("%d. %s\n", admin_actions_count, exit);
+		scanf("%d", &numberOfOperation);
+		if (numberOfOperation == admin_actions_count){
 			printf("Good buy!\n");
-			roleIdentified=UNKNOWN;
-			isExit=true;
+			//roleIdentified = UNKNOWN;
+			isExit = true;
 			break;
-		default:
-			cout << "Unknown operation.Please, try again." << endl;
-			break;
+		}
+		if (numberOfOperation >= 0 && numberOfOperation < admin_actions_count)
+		{
+			admin_actions[numberOfOperation]();
+		}
+		else
+		{
+			printf("Unknown operation.Please, try again.\n");
 		}
 	}
 }
