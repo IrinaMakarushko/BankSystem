@@ -13,6 +13,8 @@ void deleteAccount();
 void select_all_deleted_client();
 void select_all_client();
 void searchClient();
+void setClientActive();
+void setClientInactive();
 
 #define add_money "add money"
 #define withdraw_money "withdraw money"
@@ -20,7 +22,7 @@ void searchClient();
 #define login_string "Log In"
 #define exit "Exit "
 
-int admin_actions_count = 7;
+int admin_actions_count = 8;
 void(*admin_actions[])() =
 { 
 	createClient,
@@ -30,6 +32,7 @@ void(*admin_actions[])() =
 	select_all_client,
 	select_all_deleted_client,
 	searchClient,
+	setClientActive
 };
 char admin_actions_names[][128] =
 {
@@ -40,6 +43,7 @@ char admin_actions_names[][128] =
 	"watch list of client",
 	"watch list of deleted client",
 	"search client",
+	"set client active"
 };
 
 char operator_actions_names[][128] =
@@ -68,11 +72,17 @@ char* insertDeletedUser = "INSERT INTO deleted_clients (FIRST_NAME, LAST_NAME) V
 char* selectAllDeleted = "SELECT * FROM deleted_clients;";
 char* selectAccountInfById = "SELECT client_id, balance, current_transactions FROM account WHERE account_id = ?;";
 char* insertDeletedAccount = "INSERT INTO deleted_account (ACCOUNT_ID, CLIENT_ID, BALANCE, TOTAL_TRANSACTIONS) VALUES (?,?,?,?);";
+
+char* setActive = "UPDATE client SET is_active=1 WHERE client_id=?;";
+char* setInactive = "UPDATE client SET is_active=0 WHERE client_id=?;";
+               
 enum roleInSystem{UNKNOWN,ADMIN,OPERATOR} roleIdentified;
 int currentBalance;
 int currentTransaction;
-int totalTransaction;
+int totalTransaction; 
 int monthlyQuota;
+
+
 void connection() {
 	char *zErrMsg = 0;
 	int rc;
@@ -83,6 +93,59 @@ void connection() {
 	 fprintf(stderr, "Opened database successfully\n");
 	 } */
 }
+
+
+void setClientActive()
+{
+	int rc;
+	int client_id;
+	printf("Enter client id\n");
+	scanf("%d", &client_id);
+	if(sqlite3_prepare(conn, setActive, strlen(setActive), &stmt, NULL) == SQLITE_OK) {
+	
+		if(sqlite3_bind_int(stmt, 1, client_id) == SQLITE_OK ) 
+		{
+				rc = sqlite3_step(stmt);
+				printf("Client id : %d is active\n", client_id);
+		}
+		else
+		{
+			printf("Something went wrong. Try again!\n");
+		}
+	}
+	else
+	{
+		printf("Something went wrong. Try again!\n");
+	}
+}
+
+void setClientInactive()
+{
+	int rc;
+	int client_id;
+	printf("Enter client id\n");
+	scanf("%d", &client_id);
+
+	if(sqlite3_prepare(conn, setInactive, strlen (setInactive), &stmt, NULL) == SQLITE_OK) {
+
+		if(sqlite3_bind_int(stmt, 1, client_id)== SQLITE_OK ) 
+		{
+				rc = sqlite3_step(stmt);
+				printf("client created\n");
+		}
+		else
+		{
+			printf("Something went wrong. Try again!");
+		}
+	}
+	else
+	{
+		printf("Something went wrong. Try again!");
+	}
+
+}
+
+
 void createClient() {
 	int rc;
 	char* first_name = new char[50];
@@ -384,7 +447,7 @@ void adminActions(){
 	int numberOfOperation = 0;
 	while (!isExit){
 		printf("Operations:\n");
-		for (short i = 0; i < admin_actions_count; ++i){
+		for (int i = 0; i < admin_actions_count; ++i){
 			printf("%d. %s\n", i, admin_actions_names[i]);
 		}
 		printf("%d. %s\n", admin_actions_count, exit);
