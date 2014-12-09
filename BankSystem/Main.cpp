@@ -3,31 +3,65 @@
 #include <stdio.h>
 #include <string>
 using namespace std;
-#define create_client "create client"
-#define delete_client "delete client"
-#define add_account "add account"
-#define delete_account "delete account"
-#define add_account "add account"
-#define add_money "add money"
-#define withdraw_money "withdraw money"
+
+void createClient();
+void deleteClient();
+void addAccount();
+void deleteAccount();
+void select_all_deleted_client();
+void select_all_client();
+void searchClient();
+
+int addMoney();
+int withdrawMoney();
+
+//#define add_money "add money"
+//#define withdraw_money "withdraw money"
 #define view_accounts "view accounts"
 #define login_string "Log In"
 #define exit "Exit "
 
-#define admin_create_client 1
-#define admin_delete_client 2
-#define admin_add_account 3
-#define admin_delete_account 4
-#define admin_exit 5
+int admin_actions_count = 7;
+void(*admin_actions[])() =
+{ 
+	createClient,
+	deleteClient,
+	addAccount,
+	deleteAccount,
+	select_all_client,
+	select_all_deleted_client,
+	searchClient,
+};
+char admin_actions_names[][128] =
+{
+	"create client",
+	"delete client",
+	"add account",
+	"delete account",
+	"watch list of client",
+	"watch list of deleted client",
+	"search client",
+};
 
-#define operator_add_money 1
+int operator_actions_count = 2;
+int(*operator_actions[])() =
+{
+	addMoney,
+	withdrawMoney,
+};
+char operator_actions_names[][128] =
+{
+	"add money",
+	"withdraw money"
+};
+
+/*#define operator_add_money 1
 #define operator_withdraw_money 2
-#define operator_exit 3
-
+#define operator_exit 3*/
 #define login_action 1
 #define exit_action 2
-
 sqlite3 *conn;
+sqlite3 *conn_del;
 sqlite3_stmt * stmt;
 char* insert = "INSERT INTO client (CLIENT_ID,FIRST_NAME,LAST_NAME) VALUES (?, ?, ?);";
 char* insertAccount = "INSERT INTO ACCOUNT (CLIENT_ID) VALUES (?);";
@@ -36,22 +70,25 @@ char* deleteAccountById = "DELETE FROM account WHERE account_id=?;";
 char* selectClientById = "SELECT * FROM client WHERE client_id=?;";
 char* selectAllClient = "SELECT * FROM client;";
 char* deleteClientById = "DELETE FROM client WHERE client_id=?;";
-enum roleInSystem{UNKNOWN,ADMIN,OPERATOR};
-roleInSystem roleIdentified;
+char* deleteAccountByClientId = "DELETE FROM account WHERE client_id=?;";
+char* insertDeletedUser = "INSERT INTO deleted_user (FIRST_NAME, LAST_NAME) VALUES (?,?);";
+char* selectAllDeleted = "SELECT * FROM deleted_user;";
+char* selectAccountInfById = "SELECT client_id, balance, current_transactions FROM account WHERE account_id = ?;";
+char* insertDeletedAccount = "INSERT INTO deleted_account (ACCOUNT_ID, CLIENT_ID, BALANCE, TOTAL_TRANSACTIONS) VALUES (?,?,?,?);";
+enum roleInSystem{UNKNOWN,ADMIN,OPERATOR} roleIdentified;
 int currentBalance;
 int currentTransaction;
 int totalTransaction;
 int monthlyQuota;
-
-void connection() {	
-    char *zErrMsg = 0;
-    int rc; 
-    rc = sqlite3_open("12.db", &conn);
-    if(rc){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(conn));
-    }/*else{ 
-      fprintf(stderr, "Opened database successfully\n");
-    }  */ 
+void connection() {
+	char *zErrMsg = 0;
+	int rc;
+	rc = sqlite3_open("12.db", &conn);
+	if(rc){
+		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(conn));
+	}/*else{
+	 fprintf(stderr, "Opened database successfully\n");
+	 } */
 }
 void createClient() {
 	int rc;
@@ -72,66 +109,201 @@ void createClient() {
 		printf("client didn't create, try again!\n");
 	sqlite3_reset(stmt);
 }
+bool insertDeletedClient (char* firstName, char* lastName) {
+	if(sqlite3_prepare(conn, insertDeletedUser, strlen (insertDeletedUser), &stmt, NULL) == SQLITE_OK) 
+		if(sqlite3_bind_text(stmt, 1, firstName, -1, 0)== SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, lastName, -1, 0)== SQLITE_OK) 
+				if(sqlite3_step(stmt)==SQLITE_DONE)
+					return true;
+	return false;
+}
+bool deleteRelationship(char* client_id) { 
+	int rc;
+	if((rc=sqlite3_prepare(conn, deleteClientById, strlen (deleteClientById), &stmt, NULL)) == SQLITE_OK)
+		if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK)
+			if(sqlite3_step(stmt)==SQLITE_DONE)
+				if((rc=sqlite3_prepare(conn, deleteAccountByClientId, strlen (deleteAccountByClientId), &stmt, NULL)) == SQLITE_OK)
+					if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK)
+						if(sqlite3_step(stmt)==SQLITE_DONE)
+							return true;
+	return false;
+}
 void deleteClient() {
 	int rc;
 	char* client_id = new char[10];
-	printf("Please input client id!\nadmin->");
+	std::cout<<"Please input client id!\nadmin->";
 	std::cin>>client_id;
-	if(sqlite3_prepare(conn, selectClientById, strlen (selectClientById), &stmt, NULL) == SQLITE_OK) 
+	char* firstN = new char[50];
+	char* lastN = new char[50];
+	if(sqlite3_prepare(conn, selectClientById, strlen (selectClientById), &stmt, NULL) == SQLITE_OK)
 		if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK) {
 			int cols = sqlite3_column_count(stmt);
 			rc = sqlite3_step(stmt);//executing the statement
+			firstN = (char*)sqlite3_column_text(stmt, 1);
+			lastN = (char*)sqlite3_column_text(stmt, 2);
 			if(rc == SQLITE_ROW) {
-				sqlite3_reset(stmt);
-				if((rc=sqlite3_prepare(conn, deleteClientById, strlen (deleteClientById), &stmt, NULL)) == SQLITE_OK) 
-					if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK) 
-						if(sqlite3_step(stmt)==SQLITE_DONE)
-							printf("client deleted!\n");
-			}	
+				if(deleteRelationship(client_id))
+					if(insertDeletedClient(firstN,lastN))
+						printf("client deleted!\n");
+					else printf("client didn't deleted, try again!\n");
+				else printf("client didn't deleted, try again!\n");
+			}
 			else
 				printf("client didn't deleted, try again!\n");
 		}
 }
+void select_all_client() {
+	int rc;
+	if(sqlite3_prepare(conn, selectAllClient, strlen (selectAllClient), &stmt, NULL) == SQLITE_OK) {
+		rc = sqlite3_step(stmt);
+		printf("CLIENT_ID   First_Name   Last_Name\n");
+		while(rc == SQLITE_ROW) {
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 0));
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 1));
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 2));
+			rc = sqlite3_step(stmt);
+			printf("\n");
+		}	
+	}
+}
+void select_all_deleted_client() {
+	int rc;
+	if(sqlite3_prepare(conn, selectAllDeleted, strlen (selectAllDeleted), &stmt, NULL) == SQLITE_OK) {
+		rc = sqlite3_step(stmt);
+		printf("CLIENT_ID  First_Name  Last_Name\n");
+		while(rc == SQLITE_ROW) {
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 0));
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 1));
+			printf("   %s      ",(char*)sqlite3_column_text(stmt, 2));
+			rc = sqlite3_step(stmt);
+			printf("\n");
+		}	
+	}
+}
+
+void searchClient()
+{
+	int rc;
+	char* first_name = new char[50];
+	char* last_name = new char[50];
+	char* buffer = new char[50];
+	printf("Please input first name of client\nadmin->");
+	std::cin >> buffer;
+	sprintf(first_name, "%%%s%%", buffer);
+	printf("Please input last name of client\nadmin->");
+	std::cin >> buffer;
+	sprintf(last_name, "%%%s%%", buffer);
+	char *search_and = "SELECT * FROM client WHERE first_name LIKE ? AND last_name LIKE ?;";
+	char *search_xor = "SELECT * FROM client WHERE (first_name LIKE ? OR last_name LIKE ?) AND NOT (first_name LIKE ? AND last_name LIKE ?);";
+
+	bool flag = false;
+
+	if (sqlite3_prepare(conn, search_and, strlen(search_and), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, last_name, -1, 0) == SQLITE_OK) {
+			while (sqlite3_step(stmt) != SQLITE_DONE)
+			{
+				printf("%d, %s, %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
+				flag = true;
+			}
+		}
+	}
+	else
+		printf("something went wrong!\n");
+
+	sqlite3_reset(stmt);
+
+	if (sqlite3_prepare(conn, search_xor, strlen(search_xor), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 2, last_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 3, first_name, -1, 0) == SQLITE_OK &&
+			sqlite3_bind_text(stmt, 4, last_name, -1, 0) == SQLITE_OK) {
+			while (sqlite3_step(stmt) != SQLITE_DONE)
+			{
+				printf("%d, %s, %s\n", sqlite3_column_int(stmt, 0), sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt, 2));
+				flag = true;
+			}
+		}
+	}
+	else
+		printf("something went wrong!\n");
+
+	sqlite3_reset(stmt);
+
+	if (!flag){
+		printf("Nothing found.\n");
+	}
+}
+
+
 void addAccount()
 {
 	int rc;
 	int client_id;
-	
-	printf("Please input client id:\nadmin->");
+
+	printf("Please input client id:\nadmin-> ");
 	scanf("%d", &client_id);
-//	std::cin >> client_id;
+	
 	char query[50];
 	_itoa(client_id, query, 10);
 
 	if (sqlite3_prepare(conn, selectClientById, strlen(selectClientById), &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK)  {
+		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK) {
 			rc = sqlite3_step(stmt);
-			
 		}
 	}
 	else{
-		printf("input error, try again!\n");
-		printf("\n");
-	}
-
-	if (rc != 100)
+		printf("input error, try again!\n\n");
+		}
+	if (rc != SQLITE_ROW)
 	{
-		printf("no such client\n");
-		printf("\n");
+		printf("no such client\n\n");
 		return;
 	}
 	if (sqlite3_prepare(conn, insertAccount, strlen(insertAccount), &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK)  {
+		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK) {
+			
 			rc = sqlite3_step(stmt);
-			printf("account added\n");
-			printf("\n");
+			printf("account added\n\n");
 		}
 	}
 	else{
-		printf("input error, try again!\n");
-		printf("\n");
-	}
+		printf("input error, try again!\n\n");
+		}
 	sqlite3_reset(stmt);
+}
+
+void moveToDeletedAccount(char * account_id)
+{
+	int rc;
+	char clientId[50];
+	char balance[50];
+	char currentTransactions[50];
+	
+
+	if (sqlite3_prepare(conn, selectAccountInfById, strlen(selectAccountInfById), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, account_id, -1, 0) == SQLITE_OK) {
+			rc = sqlite3_step(stmt);
+
+			if (rc == SQLITE_ROW)
+			{
+				strcpy(clientId, (char*)sqlite3_column_text(stmt, 0));
+				strcpy(balance, (char*)sqlite3_column_text(stmt, 1));
+				strcpy(currentTransactions, (char*)sqlite3_column_text(stmt, 2));
+				
+				if (sqlite3_prepare(conn, insertDeletedAccount, strlen(insertDeletedAccount), &stmt, NULL) == SQLITE_OK)
+				if (sqlite3_bind_text(stmt, 1, account_id, -1, 0) == SQLITE_OK && sqlite3_bind_text(stmt, 2, clientId, -1, 0) == SQLITE_OK 
+					&& sqlite3_bind_text(stmt, 3, balance, -1, 0) == SQLITE_OK && sqlite3_bind_text(stmt, 4, currentTransactions, -1, 0) == SQLITE_OK)
+						rc = sqlite3_step(stmt);
+				
+			}
+			
+					}
+	}
+	else {
+		printf("input error, try again!\n\n");
+
+	}
 }
 
 void deleteAccount()
@@ -139,42 +311,41 @@ void deleteAccount()
 	int rc;
 	int account_id;
 
-	printf("Please input account id:\nadmin->");
+	printf("Please input account id:\nadmin-> ");
 	scanf("%d", & account_id);
-//	std::cin >> account_id;
+
 	char query[50];
 	_itoa(account_id, query, 10);
 
-	if (sqlite3_prepare(conn, selectAccountById, strlen(selectAccountById), &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK)  {
-			rc = sqlite3_step(stmt);
+	moveToDeletedAccount(query);
 
+	if (sqlite3_prepare(conn, selectAccountById, strlen(selectAccountById), &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK) {
+			rc = sqlite3_step(stmt);
 		}
 	}
 	else {
-		printf("input error, try again!\n");
-		printf("\n");
+		printf("input error, try again!\n\n");
+		
 	}
-
-	if (rc != 100)
+	if (rc != SQLITE_ROW)
 	{
-		printf("no such account\n");
-		printf("\n");
+		printf("no such account\n\n");
+		
 		return;
 	}
 	if (sqlite3_prepare(conn, deleteAccountById, strlen(deleteAccountById), &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK)  {
+		if (sqlite3_bind_text(stmt, 1, query, -1, 0) == SQLITE_OK) {
 			rc = sqlite3_step(stmt);
-			printf("account deleted\n");
-			printf("\n");
+			printf("account deleted\n\n");
+			
 		}
 	}
 	else{
-		printf("input error, try again!\n");
-		printf("\n");
+		printf("input error, try again!\n\n");
+		
 	}
 	sqlite3_reset(stmt);
-
 }
 
 int addMoney(int & balance1, int totalTransaction1, int currentBalance1, int & currentTransaction1,int monthlyQuota1 ){
@@ -210,42 +381,34 @@ int withdrawMoney(int & balance1, int totalTransaction1, int currentBalance1, in
 void viewAccounts(){}
 void adminActions(){
 	connection();
-	bool isExit=false;
-	int numberOfOperation=0;
-	while(!isExit){
-		printf( "Operations:\n" );
-		printf("%d %s\n",admin_create_client, create_client );
-		printf("%d %s\n",admin_delete_client, delete_client);
-		printf("%d %s\n",admin_add_account, add_account );
-		printf("%d %s\n",admin_delete_account, delete_account);
-		printf("%d %s\n",admin_exit, exit);
-		printf("Please, enter a code of operation.\n");
-		scanf("%d",&numberOfOperation);
-		
-		switch(numberOfOperation){
-			case admin_create_client:
-				createClient();
+	bool isExit = false;
+	int numberOfOperation = 0;
+	while (!isExit){
+		printf("Operations:\n");
+		for (short i = 0; i < admin_actions_count; ++i){
+			printf("%d. %s\n", i, admin_actions_names[i]);
+		}
+		printf("%d. %s\n", admin_actions_count, exit);
+		scanf("%d", &numberOfOperation);
+		if (numberOfOperation == admin_actions_count){
+			printf("Good buy!\n");
+			roleIdentified = UNKNOWN;
+			isExit = true;
 			break;
-			case admin_delete_client:
-				deleteClient();
-			break;
-			case admin_add_account:
-				addAccount();
-			break;
-			case admin_exit:
-				printf("Good buy!\n");
-				roleIdentified=UNKNOWN;
-				isExit=true;
-			break;
-			default:
-				cout << "Unknown operation.Please, try again." << endl;
-			break;
+		}
+		if (numberOfOperation >= 0 && numberOfOperation < admin_actions_count)
+		{
+			admin_actions[numberOfOperation]();
+		}
+		else
+		{
+			printf("Unknown operation.Please, try again.\n");
 		}
 	}
 }
 static int showList(void *data, int argc, char **argv, char **azColName){
 	for(int i=0; i<argc; i++){
-	printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 	}
 	printf("\n");
 	return 0;
@@ -260,7 +423,6 @@ static int setSystemConfig(void *data, int argc, char **argv, char **azColName){
 	monthlyQuota=atoi(argv[1]);
 	return 0;
 }
-
 void operatorActions(){
 	char *zErrMsg;
 	const char* data;
@@ -310,10 +472,35 @@ void operatorActions(){
 		sqlite3_close(conn);
 		return;
 	}
+
+
 	int numberOfOperation=0;
 	bool isExit=false;
 	printf("Operations:\n");
-	printf("%d %s\n",operator_add_money,add_money);
+
+	for (short i = 0; i < operator_actions_count; ++i){
+		printf("%d. %s\n", i, operator_actions_names[i]);
+	}
+	printf("%d. %s\n", operator_actions_count, exit);
+	scanf("%d", &numberOfOperation);
+	if (numberOfOperation == operator_actions_count){
+		printf("Good buy!\n");
+		roleIdentified = UNKNOWN;
+		isExit = true;
+	}
+
+	int result = 0;
+
+	if (numberOfOperation >= 0 && numberOfOperation < operator_actions_count)
+	{
+		result = operator_actions[numberOfOperation]();
+	}
+	else
+	{
+		printf("Unknown operation.Please, try again.\n");
+	}
+
+	/*printf("%d %s\n",operator_add_money,add_money);
 	printf("%d %s\n",operator_withdraw_money ,withdraw_money);
 	printf("%d %s\n",operator_exit, exit);
 	scanf("%d",&numberOfOperation);
@@ -323,21 +510,30 @@ void operatorActions(){
 	scanf("%d", &balance);
 	
 	switch(numberOfOperation){
+<<<<<<< HEAD
 		case operator_add_money:
 		result = addMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
 		break;
 		case operator_withdraw_money:
 		result = withdrawMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
+=======
+	case operator_add_money:
+		result = addMoney();
 		break;
-		case operator_exit:
+	case operator_withdraw_money:
+		result = withdrawMoney();
+>>>>>>> a92b85db7d3d2b94b5fecfa940da53ea69fa1da6
+		break;
+	case operator_exit:
 		printf("Good bye!\n");
 		roleIdentified=UNKNOWN;
 		isExit=true;
 		break;
-		default:
+	default:
 		printf("Unknown operation.Please, try again.\n");
 		break;
-	}
+	}*/
+
 	//------------
 	if(!isExit && result == 0){
 		char bufferUpdate[500];
@@ -346,31 +542,29 @@ void operatorActions(){
 		int rc = sqlite3_exec(conn,bufferUpdate,NULL,NULL,NULL);
 		sqlite3_exec(conn, "END TRANSACTION;", NULL, NULL, NULL);
 		if(rc){
-		printf("Error");
+			printf("Error");
 		}else{
 			printf("Operation is executed successfully!\n");
 		}
 	}
 	sqlite3_close(conn);
-//--------------------
+	//--------------------
 }
-
 void chooseOperations(){
 	switch(roleIdentified){
-			case(ADMIN):
-				printf("You are admin.\n");
-				adminActions();
-				break;
-			case(OPERATOR):
-				printf("You are operator.\n");
-				operatorActions();
-				break;
-			case(UNKNOWN):
-				printf("ERROR!You are not registred in system!\n");
-				break;
-		}
+	case(ADMIN):
+		printf("You are admin.\n");
+		adminActions();
+		break;
+	case(OPERATOR):
+		printf("You are operator.\n");
+		operatorActions();
+		break;
+	case(UNKNOWN):
+		printf("ERROR!You are not registred in system!\n");
+		break;
+	}
 }
-
 static int authorization(void *data, int argc, char **argv, char **azColName){
 	string role=argv[0];
 	if(role=="admin")
@@ -379,22 +573,18 @@ static int authorization(void *data, int argc, char **argv, char **azColName){
 		roleIdentified=OPERATOR;
 	return 0;
 }
-
 void authentication(){
 	connection();
 	char *zErrMsg = 0;
 	const char* data = "Callback function called\n";
-   	
 	char login[20];
 	char password[20];
 	printf("Enter login: ");
 	scanf("%s", login);
 	printf("Enter password: ");
 	scanf("%s", password);
-	
 	char buffer [100];
 	sprintf(buffer,"select role from bank_personal where login='%s' and password='%s'",login, password);
-
 	int rc = sqlite3_exec(conn,buffer,authorization, (void*)data, &zErrMsg);
 	if(rc){
 		printf("Error");
@@ -403,9 +593,6 @@ void authentication(){
 	sqlite3_close(conn);
 	chooseOperations();
 }
-
-
-
 void main(){
 	bool isExit=false;
 	int numberOfOperation;
@@ -415,7 +602,6 @@ void main(){
 		printf("%d %s\n",exit_action,exit);
 		printf("Please, enter a number of action.\n") ;
 		scanf("%d",&numberOfOperation);
-
 		switch(numberOfOperation){
 		case login_action:
 			authentication();
