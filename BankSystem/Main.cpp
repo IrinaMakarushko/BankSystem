@@ -1,3 +1,5 @@
+#define EXPORT_TEST_FUNCTIONS
+#include "Header.h"
 #include "sqlite3.h"
 #include <iostream>
 #include <stdio.h>
@@ -11,9 +13,6 @@ void deleteAccount();
 void select_all_deleted_client();
 void select_all_client();
 void searchClient();
-
-int addMoney();
-int withdrawMoney();
 
 #define add_money "add money"
 #define withdraw_money "withdraw money"
@@ -343,9 +342,11 @@ void deleteAccount()
 }
 
 int addMoney(int & balance1, int totalTransaction1, int currentBalance1, int & currentTransaction1,int monthlyQuota1 ){
-	
-	int fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
-	if(currentTransaction1 + 1 > totalTransaction1 && balance1 + currentBalance1 - fee < 0){
+	int fee = 0;
+	if (totalTransaction1 < currentTransaction1){
+		fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
+	}
+	if( balance1 + currentBalance1 - fee < 0){
 		printf("It is not possible to commit the transaction\n");
 		return -1;
 	}
@@ -358,9 +359,11 @@ int addMoney(int & balance1, int totalTransaction1, int currentBalance1, int & c
 	return 0;
 }
 int withdrawMoney(int & balance1, int totalTransaction1, int currentBalance1, int & currentTransaction1,int monthlyQuota1 ){
-	
-	int fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
-	if(currentTransaction1 + 1 > totalTransaction1 && currentBalance1 - balance1 - fee < 0){
+	int fee = 0;
+	if (totalTransaction1 < currentTransaction1){
+		fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
+	}
+	if(currentBalance1 - balance1 - fee < 0){
 		printf("It is not possible to commit the transaction\n");
 		return -1;
 	}
@@ -561,7 +564,7 @@ void authentication(){
 	sqlite3_close(conn);
 	chooseOperations();
 }
-void main(){
+int main(){
 	bool isExit=false;
 	int numberOfOperation;
 	while(!isExit){
@@ -584,4 +587,5 @@ void main(){
 		}
 	}
 	system("pause");
+	return 0;
 }
