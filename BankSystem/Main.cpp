@@ -176,34 +176,34 @@ void deleteAccount()
 	sqlite3_reset(stmt);
 
 }
-int balance = 0;
-int addMoney(){
+
+int addMoney(int & balance1, int totalTransaction1, int currentBalance1, int & currentTransaction1,int monthlyQuota1 ){
 	
-	int fee = (currentTransaction + 1 - totalTransaction) * monthlyQuota;
-	if(currentTransaction + 1 > totalTransaction && balance + currentBalance - fee < 0){
+	int fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
+	if(currentTransaction1 + 1 > totalTransaction1 && balance1 + currentBalance1 - fee < 0){
 		printf("It is not possible to commit the transaction\n");
 		return -1;
 	}
-	currentTransaction++;
-	if(currentTransaction > totalTransaction){
-		balance = balance + currentBalance - fee;
+	currentTransaction1++;
+	if(currentTransaction1 > totalTransaction1){
+		balance1 = balance1 + currentBalance1 - fee;
 	} else{
-		balance = balance + currentBalance;
+		balance1 = balance1 + currentBalance1;
 	}
 	return 0;
 }
-int withdrawMoney(){
+int withdrawMoney(int & balance1, int totalTransaction1, int currentBalance1, int & currentTransaction1,int monthlyQuota1 ){
 	
-	int fee = (currentTransaction + 1 - totalTransaction) * monthlyQuota;
-	if(currentTransaction + 1 > totalTransaction && currentBalance - balance - fee < 0){
+	int fee = (currentTransaction1 + 1 - totalTransaction1) * monthlyQuota1;
+	if(currentTransaction1 + 1 > totalTransaction1 && currentBalance1 - balance1 - fee < 0){
 		printf("It is not possible to commit the transaction\n");
 		return -1;
 	}
-	currentTransaction++;
-	if(currentTransaction > totalTransaction){
-		balance = currentBalance - balance - fee;
+	currentTransaction1++;
+	if(currentTransaction1 > totalTransaction1){
+		balance1 = currentBalance1 - balance1 - fee;
 	} else{
-		balance = currentBalance - balance;
+		balance1 = currentBalance1 - balance1;
 	}
 	return 0;
 }
@@ -318,16 +318,16 @@ void operatorActions(){
 	printf("%d %s\n",operator_exit, exit);
 	scanf("%d",&numberOfOperation);
 	int result = 0;
-	balance=0;
+	int balance = 0;
 	printf("Enter sum: ");
 	scanf("%d", &balance);
-
+	
 	switch(numberOfOperation){
 		case operator_add_money:
-		result = addMoney();
+		result = addMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
 		break;
 		case operator_withdraw_money:
-		result = withdrawMoney();
+		result = withdrawMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
 		break;
 		case operator_exit:
 		printf("Good bye!\n");
