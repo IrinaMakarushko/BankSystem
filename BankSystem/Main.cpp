@@ -65,8 +65,8 @@ char* selectClientById = "SELECT * FROM client WHERE client_id=?;";
 char* selectAllClient = "SELECT * FROM client;";
 char* deleteClientById = "DELETE FROM client WHERE client_id=?;";
 char* deleteAccountByClientId = "DELETE FROM account WHERE client_id=?;";
-char* insertDeletedUser = "INSERT INTO deleted_user (FIRST_NAME, LAST_NAME) VALUES (?,?);";
-char* selectAllDeleted = "SELECT * FROM deleted_user;";
+char* insertDeletedUser = "INSERT INTO deleted_clients (FIRST_NAME, LAST_NAME) VALUES (?,?);";
+char* selectAllDeleted = "SELECT * FROM deleted_clients;";
 char* selectAccountInfById = "SELECT client_id, balance, current_transactions FROM account WHERE account_id = ?;";
 char* insertDeletedAccount = "INSERT INTO deleted_account (ACCOUNT_ID, CLIENT_ID, BALANCE, TOTAL_TRANSACTIONS) VALUES (?,?,?,?);";
 enum roleInSystem{UNKNOWN,ADMIN,OPERATOR} roleIdentified;
@@ -113,6 +113,7 @@ bool insertDeletedClient (char* firstName, char* lastName) {
 }
 bool deleteRelationship(char* client_id) { 
 	int rc;
+	sqlite3_exec(conn, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 	if((rc=sqlite3_prepare(conn, deleteClientById, strlen (deleteClientById), &stmt, NULL)) == SQLITE_OK)
 		if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK)
 			if(sqlite3_step(stmt)==SQLITE_DONE)
@@ -120,6 +121,7 @@ bool deleteRelationship(char* client_id) {
 					if(sqlite3_bind_text(stmt, 1, client_id, -1, 0)== SQLITE_OK)
 						if(sqlite3_step(stmt)==SQLITE_DONE)
 							return true;
+	sqlite3_exec(conn, "END TRANSACTION;", NULL, NULL, NULL);
 	return false;
 }
 void deleteClient() {
@@ -562,6 +564,11 @@ void authentication(){
 	chooseOperations();
 }
 void main(){
+	//connection();
+	//char* createTable = "CREATE TABLE deleted_clients (CLIENT_ID INTEGER PRIMARY KEY AUTOINCREMENT, FIRST_NAME VARCHAR(255), LAST_NAME VARCHAR(255));";
+	//sqlite3_prepare(conn, createTable, strlen (createTable), &stmt, NULL);
+	//int rc = sqlite3_step(stmt);
+	//cout<<rc;
 	bool isExit=false;
 	int numberOfOperation;
 	while(!isExit){
