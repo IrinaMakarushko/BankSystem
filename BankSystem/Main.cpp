@@ -15,8 +15,8 @@ void searchClient();
 int addMoney();
 int withdrawMoney();
 
-//#define add_money "add money"
-//#define withdraw_money "withdraw money"
+#define add_money "add money"
+#define withdraw_money "withdraw money"
 #define view_accounts "view accounts"
 #define login_string "Log In"
 #define exit "Exit "
@@ -43,21 +43,15 @@ char admin_actions_names[][128] =
 	"search client",
 };
 
-int operator_actions_count = 2;
-int(*operator_actions[])() =
-{
-	addMoney,
-	withdrawMoney,
-};
 char operator_actions_names[][128] =
 {
 	"add money",
 	"withdraw money"
 };
 
-/*#define operator_add_money 1
+#define operator_add_money 1
 #define operator_withdraw_money 2
-#define operator_exit 3*/
+#define operator_exit 3
 #define login_action 1
 #define exit_action 2
 sqlite3 *conn;
@@ -478,51 +472,25 @@ void operatorActions(){
 	bool isExit=false;
 	printf("Operations:\n");
 
-	for (short i = 0; i < operator_actions_count; ++i){
-		printf("%d. %s\n", i, operator_actions_names[i]);
-	}
-	printf("%d. %s\n", operator_actions_count, exit);
-	scanf("%d", &numberOfOperation);
-	if (numberOfOperation == operator_actions_count){
-		printf("Good buy!\n");
-		roleIdentified = UNKNOWN;
-		isExit = true;
-	}
-
-	int result = 0;
-
-	if (numberOfOperation >= 0 && numberOfOperation < operator_actions_count)
-	{
-		result = operator_actions[numberOfOperation]();
-	}
-	else
-	{
-		printf("Unknown operation.Please, try again.\n");
-	}
-
-	/*printf("%d %s\n",operator_add_money,add_money);
+	printf("%d %s\n",operator_add_money,add_money);
 	printf("%d %s\n",operator_withdraw_money ,withdraw_money);
 	printf("%d %s\n",operator_exit, exit);
 	scanf("%d",&numberOfOperation);
 	int result = 0;
 	int balance = 0;
-	printf("Enter sum: ");
-	scanf("%d", &balance);
+	
 	
 	switch(numberOfOperation){
-<<<<<<< HEAD
+
 		case operator_add_money:
+			printf("Enter sum: ");
+			scanf("%d", &balance);
 		result = addMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
 		break;
 		case operator_withdraw_money:
+			printf("Enter sum: ");
+			scanf("%d", &balance);
 		result = withdrawMoney(balance, totalTransaction, currentBalance, currentTransaction, monthlyQuota);
-=======
-	case operator_add_money:
-		result = addMoney();
-		break;
-	case operator_withdraw_money:
-		result = withdrawMoney();
->>>>>>> a92b85db7d3d2b94b5fecfa940da53ea69fa1da6
 		break;
 	case operator_exit:
 		printf("Good bye!\n");
@@ -532,7 +500,7 @@ void operatorActions(){
 	default:
 		printf("Unknown operation.Please, try again.\n");
 		break;
-	}*/
+	}
 
 	//------------
 	if(!isExit && result == 0){
