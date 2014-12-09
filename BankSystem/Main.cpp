@@ -349,9 +349,7 @@ void deleteAccount()
 }
 int balance = 0;
 int addMoney(){
-	balance=0;
-	printf("Enter sum: ");
-	scanf("%d", &balance);
+	
 	int fee = (currentTransaction + 1 - totalTransaction) * monthlyQuota;
 	if(currentTransaction + 1 > totalTransaction && balance + currentBalance - fee < 0){
 		printf("It is not possible to commit the transaction\n");
@@ -366,9 +364,7 @@ int addMoney(){
 	return 0;
 }
 int withdrawMoney(){
-	balance=0;
-	printf("Enter sum: ");
-	scanf("%d", &balance);
+	
 	int fee = (currentTransaction + 1 - totalTransaction) * monthlyQuota;
 	if(currentTransaction + 1 > totalTransaction && currentBalance - balance - fee < 0){
 		printf("It is not possible to commit the transaction\n");
@@ -509,6 +505,10 @@ void operatorActions(){
 	printf("%d %s\n",operator_exit, exit);
 	scanf("%d",&numberOfOperation);
 	int result = 0;
+	balance=0;
+	printf("Enter sum: ");
+	scanf("%d", &balance);
+
 	switch(numberOfOperation){
 	case operator_add_money:
 		result = addMoney();
@@ -530,7 +530,9 @@ void operatorActions(){
 	if(!isExit && result == 0){
 		char bufferUpdate[500];
 		sprintf(bufferUpdate,"update account set balance='%d', current_transactions='%d' where account_id='%d'",balance, currentTransaction, idAccount);
+		sqlite3_exec(conn, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 		int rc = sqlite3_exec(conn,bufferUpdate,NULL,NULL,NULL);
+		sqlite3_exec(conn, "END TRANSACTION;", NULL, NULL, NULL);
 		if(rc){
 			printf("Error");
 		}else{
