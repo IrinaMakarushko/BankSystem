@@ -342,7 +342,9 @@ void operatorActions(){
 	if(!isExit && result == 0){
 		char bufferUpdate[500];
 		sprintf(bufferUpdate,"update account set balance='%d', current_transactions='%d' where account_id='%d'",balance, currentTransaction, idAccount);
+		sqlite3_exec(conn, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 		int rc = sqlite3_exec(conn,bufferUpdate,NULL,NULL,NULL);
+		sqlite3_exec(conn, "END TRANSACTION;", NULL, NULL, NULL);
 		if(rc){
 		printf("Error");
 		}else{
