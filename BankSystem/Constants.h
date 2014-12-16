@@ -20,3 +20,5 @@ char* insertDeletedUser = "INSERT INTO deleted_clients (FIRST_NAME, LAST_NAME) V
 char* selectAllDeleted = "SELECT * FROM deleted_clients;";
 char* selectAccountInfById = "SELECT client_id, balance, current_transactions FROM account WHERE account_id = ?;";
 char* insertDeletedAccount = "INSERT INTO deleted_account (ACCOUNT_ID, CLIENT_ID, BALANCE, TOTAL_TRANSACTIONS) VALUES (?,?,?,?);";
+char* setActive = "UPDATE client SET is_active=1 WHERE client_id=?;";
+char* setInactive = "UPDATE client SET is_active=0 WHERE client_id=?;";
