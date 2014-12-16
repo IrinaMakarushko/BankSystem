@@ -429,7 +429,7 @@ void adminActions(){
 		for (int i = 0; i < admin_actions_count; ++i){
 			printf("%d. %s\n", i, admin_actions_names[i]);
 		}
-		printf("%d. %s\n", admin_actions_count, exit);
+		printf("%d. %s\n", admin_actions_count, exit$);
 		scanf("%d", &numberOfOperation);
 		if (numberOfOperation == admin_actions_count){
 			printf("Good buy!\n");
@@ -521,7 +521,7 @@ void operatorActions(){
 
 	printf("%d %s\n",operator_add_money,add_money);
 	printf("%d %s\n",operator_withdraw_money ,withdraw_money);
-	printf("%d %s\n",operator_exit, exit);
+	printf("%d %s\n",operator_exit, exit$);
 	scanf("%d",&numberOfOperation);
 	int result = 0;
 	int balance = 0;
@@ -614,7 +614,7 @@ int main(){
 	while(!isExit){
 		printf("Welcome to banking system!\nActions:\n");
 		printf("%d %s\n",login_action, login_string);
-		printf("%d %s\n",exit_action,exit);
+		printf("%d %s\n",exit_action,exit$);
 		printf("Please, enter a number of action.\n") ;
 		scanf("%d",&numberOfOperation);
 		switch(numberOfOperation){
