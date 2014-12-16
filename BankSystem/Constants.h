@@ -3,7 +3,11 @@
 #define operator_exit 3
 #define login_action 1
 #define exit_action 2
-
+#define add_money "add money"
+#define withdraw_money "withdraw money"
+#define view_accounts "view accounts"
+#define login_string "Log In"
+#define exit "Exit "
 char* insert = "INSERT INTO client (CLIENT_ID,FIRST_NAME,LAST_NAME) VALUES (?, ?, ?);";
 char* insertAccount = "INSERT INTO ACCOUNT (CLIENT_ID) VALUES (?);";
 char* selectAccountById = "SELECT * FROM account WHERE account_id=?;";
